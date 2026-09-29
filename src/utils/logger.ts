@@ -1,6 +1,6 @@
 export const logger = {
-  info(message: string, ...args: unknown[]): void {
-    console.log(`[info] ${message}`, ...args);
+  info(message: string): void {
+    console.log(`[info] ${message}`);
   },
   list(label: string, items: readonly string[]): void {
     console.log(`[info] ${label}:`);
