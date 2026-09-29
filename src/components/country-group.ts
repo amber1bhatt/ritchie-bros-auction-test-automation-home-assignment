@@ -17,6 +17,10 @@ export class CountryGroup {
     return this.heading.locator('xpath=following-sibling::ul[1]').getByRole('link');
   }
 
+  siteLink(name: string): Locator {
+    return this.siteLinks().filter({ hasText: name });
+  }
+
   async sites(): Promise<DirectorySite[]> {
     const links = await this.siteLinks().all();
     const sites: DirectorySite[] = [];

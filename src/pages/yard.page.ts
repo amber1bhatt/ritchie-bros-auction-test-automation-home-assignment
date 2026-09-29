@@ -21,10 +21,15 @@ export class YardPage extends BasePage {
   readonly representativesTab: Locator;
   readonly itemsCarousel: ItemsCarousel;
 
-  constructor(page: Page, slug: string) {
+  constructor(
+    page: Page,
+    slug: string,
+    private readonly locationName: string,
+  ) {
     super(page);
     this.path = `/lp/${slug}`;
-    this.heading = page.getByRole('heading', { level: 1 });
+    // no h1 on yard pages, the name is an h3
+    this.heading = page.getByRole('heading', { level: 3, name: locationName, exact: true });
     this.auctionEventsHeading = page.getByRole('heading', { name: /auction events/i });
     this.representativesTab = page.getByRole('tab', { name: /representatives/i });
     this.itemsCarousel = new ItemsCarousel(page);

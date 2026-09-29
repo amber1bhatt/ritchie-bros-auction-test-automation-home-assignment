@@ -46,6 +46,11 @@ export class LocationsDirectoryPage extends BasePage {
     return this.group(country).sites();
   }
 
+  async openSite(country: string, name: string): Promise<void> {
+    await this.group(country).siteLink(name).click();
+    await this.page.waitForURL(/\/lp\//);
+  }
+
   async allSites(): Promise<DirectorySite[]> {
     const countries = await this.countryNames();
     const groups = await Promise.all(countries.map((country) => this.group(country).sites()));
