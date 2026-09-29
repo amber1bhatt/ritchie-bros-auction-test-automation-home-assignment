@@ -8,7 +8,7 @@ export default defineConfig({
   testDir: './tests',
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  workers: process.env.PLAYWRIGHT_WORKERS ? Number(process.env.PLAYWRIGHT_WORKERS) : 4,
+  workers: process.env.PLAYWRIGHT_WORKERS ? Number(process.env.PLAYWRIGHT_WORKERS) : isCI ? 2 : 4,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: isCI
