@@ -56,6 +56,15 @@ Things I found while building this, and the decisions that came out of them.
   titles are `item-card-title-link`. The total shows as "1-60 of N" at the
   bottom and "N results for" at the top. The tests read the bottom one.
 
+## Negative cases (e2e)
+
+- An unknown yard slug (e.g. `/lp/not-a-real-yard-xyz`) redirects to
+  `/not-found`, with the title "404 page not found".
+- An unmatched search term doesn't show an empty or error state. The API
+  returns 200 with the full catalog (~93k total, 60 returned), and
+  `fallbackApplied` stays `false`. So the test checks that the page still shows
+  results instead of erroring.
+
 ## Open questions
 
 - The `/search` page shows the Edmonton total (1906 today), but a raw
