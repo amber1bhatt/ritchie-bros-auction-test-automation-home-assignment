@@ -2,7 +2,7 @@ import type { Page, Locator } from '@playwright/test';
 
 import { CountryGroup } from '../components/country-group';
 import { SiteToggle } from '../components/site-toggle';
-import type { Yard } from '../models';
+import type { DirectorySite, Yard } from '../models';
 import { readPageProps } from '../api/next-data';
 import { URLS } from '../../test-data/constants';
 
@@ -16,11 +16,17 @@ export class LocationsDirectoryPage extends BasePage {
   protected readonly path = URLS.locationsDirectory;
 
   readonly heading: Locator;
+  readonly intro: Locator;
+  readonly satelliteNote: Locator;
+  readonly localRepresentativesContent: Locator;
   readonly toggle: SiteToggle;
 
   constructor(page: Page) {
     super(page);
     this.heading = page.getByRole('heading', { level: 1 });
+    this.intro = page.getByText(/over 60 permanent auction sites/i);
+    this.satelliteNote = page.getByText(/satellite sites are represented by an asterisk/i);
+    this.localRepresentativesContent = page.getByText(/search for representatives/i);
     this.toggle = new SiteToggle(page);
   }
 
@@ -32,8 +38,21 @@ export class LocationsDirectoryPage extends BasePage {
     return new CountryGroup(this.page, country);
   }
 
+  async countryNames(): Promise<string[]> {
+    return (await this.countryHeadings().allTextContents()).map((t) => t.trim());
+  }
+
+  async sitesFor(country: string): Promise<DirectorySite[]> {
+    return this.group(country).sites();
+  }
+
+  async allSites(): Promise<DirectorySite[]> {
+    const countries = await this.countryNames();
+    const groups = await Promise.all(countries.map((country) => this.group(country).sites()));
+    return groups.flat();
+  }
+
   async yards(): Promise<Yard[]> {
-    const props = await readPageProps<LpPageProps>(this.page);
-    return props.yards;
+    return (await readPageProps<LpPageProps>(this.page)).yards;
   }
 }

@@ -5,8 +5,8 @@ export class SiteToggle {
   readonly localRepresentatives: Locator;
 
   constructor(page: Page) {
-    this.auctionSites = page.getByRole('button', { name: /auction sites/i });
-    this.localRepresentatives = page.getByRole('button', { name: /local representatives/i });
+    this.auctionSites = page.getByRole('tab', { name: /auction sites/i });
+    this.localRepresentatives = page.getByRole('tab', { name: /local representatives/i });
   }
 
   async showAuctionSites(): Promise<void> {
