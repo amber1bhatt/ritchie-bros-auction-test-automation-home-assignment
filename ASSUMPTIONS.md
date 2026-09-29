@@ -28,6 +28,8 @@ Things I found while building this, and the decisions that came out of them.
 - `h1` is "Locations". There are 16 `h4` country headings, and each one is
   followed by a `<ul>` of `<a href="/lp/{slug}">City</a>`. Satellites have a
   trailing `*`.
+- The "Auction sites" / "Local representatives" toggles are `role="tab"`,
+  not buttons.
 - Page JSON: `pageProps.yards` (74 today). Each yard has `name`, `type`
   (`Satellite` or `Permanent`), `address` (`addressLine1`, `city`,
   `provinceStateCode`, `country`, `countryCode`, `zipPostalCode`),
@@ -50,5 +52,5 @@ Things I found while building this, and the decisions that came out of them.
   total (~2290), and the first lots have nothing to do with Edmonton. The page
   probably sends another param or a different body. Need to sort this out
   before API 3 checks the total.
-- Not sure yet if the site toggle is a `button` or a `tab`. `SiteToggle`
-  assumes `button` for now. Check when doing 1.9.
+- Toggle role: it's `role="tab"`, not a button, and `SiteToggle` uses
+  `getByRole('tab')` now.
