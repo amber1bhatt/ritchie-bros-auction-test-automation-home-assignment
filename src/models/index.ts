@@ -50,6 +50,20 @@ export interface SearchResults {
   records: SearchRecord[];
 }
 
+export interface RepresentativeContacts {
+  phone?: string;
+  mobile?: string;
+  email?: string;
+  fax?: string;
+}
+
+export interface Representative {
+  name: string;
+  role?: string;
+  region: string[];
+  contacts: RepresentativeContacts;
+}
+
 export interface DirectorySite {
   name: string;
   slug: string;
