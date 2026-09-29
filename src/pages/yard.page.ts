@@ -44,7 +44,9 @@ export class YardPage extends BasePage {
     this.detailsHeading = page.getByRole('heading', { name: /^details$/i });
     this.auctionEventsHeading = page.getByRole('heading', { name: /auction events/i });
     this.aboutHeading = page.getByRole('heading', { name: /about this yard/i });
-    this.aboutSection = page.getByText(/open weekdays for equipment drop-off, inspection and pick-up/i);
+    this.aboutSection = page.getByText(
+      /open weekdays for equipment drop-off, inspection and pick-up/i,
+    );
     this.becomeSellerHeading = page.getByRole('heading', { name: /become a seller/i });
     this.representativesTab = page.getByRole('tab', { name: /representatives/i });
     this.itemsCarousel = new ItemsCarousel(page);

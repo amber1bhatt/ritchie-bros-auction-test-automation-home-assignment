@@ -46,14 +46,15 @@ test('Scenario 3 - Edmonton yard page', async ({ page }) => {
 
     const categories = await yard.itemCategories();
     expect(categories.length).toBeGreaterThan(THRESHOLDS.itemsInYardCategories);
-    for (const category of categories) {
-      expect(category.categoryLocalized).toBeTruthy();
-      if (category.totalAssets !== undefined) {
-        expect(category.totalAssets).toBeGreaterThanOrEqual(0);
-      }
-    }
 
     const categoryNames = categories.map((c) => c.categoryLocalized);
+    expect(categoryNames.every((name) => name.length > 0)).toBe(true);
+
+    const quantities = categories
+      .map((c) => c.totalAssets)
+      .filter((n): n is number => n !== undefined);
+    expect(quantities.every((n) => n >= 0)).toBe(true);
+
     expect(categoryNames).toContain('Excavators');
     expect(categoryNames.some((name) => ITEMS_ALTERNATIVES.includes(name))).toBe(true);
   });
