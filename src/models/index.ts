@@ -1,41 +1,57 @@
 export type SiteType = 'Satellite' | 'Permanent';
 
-export interface Location {
-  name: string;
-  country: string;
-  countryCode?: string;
-  siteType: SiteType;
-}
-
 export interface YardAddress {
-  line1: string;
+  addressLine1: string;
   city: string;
-  province?: string;
-  postalCode: string;
-}
-
-export interface AuctionEvent {
-  name: string;
-  startDate?: string;
-  endDate?: string;
-  dateRange?: string;
-}
-
-export interface ItemCategory {
-  categoryLocalized: string;
-  totalAssets?: number;
+  provinceState?: string;
+  provinceStateCode?: string;
+  country: string;
+  countryCode: string;
+  zipPostalCode: string;
 }
 
 export interface Yard {
   name: string;
+  type: SiteType;
+  status: string;
   address: YardAddress;
-  phone?: string;
-  officeHours?: string;
-  events: AuctionEvent[];
-  itemsInYard: ItemCategory[];
+  contactPhone?: string;
+  pickupHoursFrom?: string;
+  pickupHoursTo?: string;
 }
 
-export interface SearchResultSummary {
+export interface UpcomingEvent {
+  event_advertised_name: string;
+  event_start_date_time?: string;
+  event_end_date_time?: string;
+  date_of_event?: string;
+}
+
+export interface ItemCategory {
+  category: string;
+  categoryLocalized: string;
+  totalAssets?: number;
+}
+
+export interface ItemsInYardGroup {
+  categories: ItemCategory[];
+}
+
+export interface SearchRecord {
+  assetDescription: string;
+  itemSiteName?: string;
+  locationName?: string;
+  dateOfEvent?: string;
+}
+
+export interface SearchResults {
   totalAmount: number;
-  firstTitles: string[];
+  returnedAmount: number;
+  records: SearchRecord[];
+}
+
+export interface DirectorySite {
+  name: string;
+  slug: string;
+  isSatellite: boolean;
 }
