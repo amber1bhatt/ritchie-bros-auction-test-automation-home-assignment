@@ -16,12 +16,14 @@ Things I found while building this, and the decisions that came out of them.
   agent. The new headless mode (`channel: 'chromium'`) is blocked too.
 - Headed Chromium works, so the suite runs headed. CI needs xvfb for that.
   `HEADLESS=true` is only there for other environments.
-- API calls use the browser context's `request`, which shares its cookies. One
-  context per worker loads `/lp` once, and every API test in that worker reuses
-  it. It used to be per test, but the API tests only read, so sharing is fine
-  and saves a page load per test.
-- Because of that, API calls don't show up in Playwright traces. The
-  validation reporter output covers what they checked.
+- API calls are sent with `fetch` from inside a browser page. They used to go
+  through Playwright's `request` API with the browser's cookies, which worked
+  locally. On GitHub runners the browser got through but some of those calls
+  got a 403, most likely because they come from Node (different TLS and
+  headers). From inside the page they look like the site's own requests.
+- One page per worker loads `/lp` once, and every API test in that worker uses
+  it. The API tests only read, so sharing is fine and saves a page load per
+  test.
 
 ## General
 
@@ -95,12 +97,13 @@ Things I found while building this, and the decisions that came out of them.
 
 - An unknown yard slug redirects to `/not-found` (title "404 page not found").
   Its page JSON is `{ __N_REDIRECT: "/not-found" }` with no `yardDetails`.
-- Malformed JSON to `/api/search` returns 400. It has to be sent as a `Buffer`,
-  because a string gets re-encoded by Playwright and comes back 200.
+- Malformed JSON to `/api/search` returns 400. With Playwright's `request` API
+  it had to be sent as a `Buffer`, since a string got re-encoded and came back 200. `fetch` sends the string as is.
 - An unknown `/api/*` route returns 404.
 - Two cases aren't tested:
-  - A stale `buildId` returns 404 from the browser but 403 from `page.request`,
-    so the result isn't consistent.
+  - A stale `buildId` returned 404 from the browser but 403 from
+    `page.request`, so the result wasn't consistent. I haven't rechecked it
+    with in-page `fetch`.
   - `size: -1` returns a 503. That looks like a server bug, and I didn't want to
     keep hitting it on prod.
 

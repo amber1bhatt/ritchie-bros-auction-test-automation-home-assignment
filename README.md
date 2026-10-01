@@ -119,10 +119,11 @@ side or the other.
 Page objects hold locators and specs hold assertions. Locators use roles, names
 and the site's `data-testid`s where possible, not CSS classes.
 
-`ApiClient` uses the browser context's `request`, so it shares the browser's
-cookies. Plain HTTP requests get blocked. Each worker loads one page first,
-which sets the cookies and gives us the Next.js `buildId` for `/_next/data`
-URLs. All API tests in that worker then reuse it.
+`ApiClient` sends its calls with `fetch` from inside a browser page, because
+the site blocks requests that don't come from a real browser. Each worker opens
+one page on `/lp`, which gets past the bot check and gives us the Next.js
+`buildId` for `/_next/data` URLs. All API tests in that worker then use that
+page.
 
 Values that change (cities, thresholds, formats) are in `test-data/constants.ts`.
 Tests check shape, minimums and membership, not exact live numbers.
