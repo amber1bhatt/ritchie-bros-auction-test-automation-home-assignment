@@ -45,6 +45,15 @@ function packageVersion(): string {
   }
 }
 
+// reporters don't get the cli --grep, so read it from argv. "@smoke" -> "smoke"
+function suiteName(): string {
+  const args = process.argv;
+  const i = args.findIndex((a) => a === '--grep' || a === '-g');
+  const filter = i >= 0 ? args[i + 1] : args.find((a) => a.startsWith('--grep='))?.slice(7);
+  if (!filter) return 'all';
+  return filter.match(/^@(\w+)$/)?.[1] ?? filter;
+}
+
 // so a trace links back to its CI run
 function ciAttributes(): Attributes {
   const e = process.env;
@@ -118,13 +127,12 @@ export default class OtelReporter implements Reporter {
 
   onBegin(config: FullConfig, suite: Suite): void {
     this.suite = suite;
-    const grep = config.projects.map((p) => String(p.grep)).find((g) => g !== '/.*/');
     this.root = this.tracer.startSpan(
       'playwright run',
       {
         startTime: new Date(),
         attributes: {
-          'test.suite': grep ?? 'all',
+          'test.suite': suiteName(),
           'test.total': suite.allTests().length,
           'test.workers': config.workers,
           'test.base_url': env.baseUrl,
