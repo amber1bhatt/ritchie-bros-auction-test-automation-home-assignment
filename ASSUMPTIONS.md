@@ -16,8 +16,12 @@ Things I found while building this, and the decisions that came out of them.
   agent. The new headless mode (`channel: 'chromium'`) is blocked too.
 - Headed Chromium works, so the suite runs headed. CI needs xvfb for that.
   `HEADLESS=true` is only there for other environments.
-- API calls use `page.request`, which shares the browser context's cookies. The
-  `api` fixture loads `/lp` once before making any calls.
+- API calls use the browser context's `request`, which shares its cookies. One
+  context per worker loads `/lp` once, and every API test in that worker reuses
+  it. It used to be per test, but the API tests only read, so sharing is fine
+  and saves a page load per test.
+- Because of that, API calls don't show up in Playwright traces. The
+  validation reporter output covers what they checked.
 
 ## General
 
@@ -100,9 +104,30 @@ Things I found while building this, and the decisions that came out of them.
   - `size: -1` returns a 503. That looks like a server bug, and I didn't want to
     keep hitting it on prod.
 
+## Third-party requests
+
+- The three pages make ~1,100 requests, and most go to about 100 ad, analytics
+  and session-recording hosts (Criteo, DoubleClick, Bing, LinkedIn, Hotjar,
+  Segment, a server-side GTM on `ssgtm.rbauction.com`, and so on).
+- I used an allowlist rather than a blocklist, because new ad partners show up
+  all the time. The allowed hosts are first-party (except `ssgtm`), Contentful
+  images, Google Maps, fonts, reCAPTCHA, LaunchDarkly (feature flags can change
+  what renders), TrustArc consent and Stripe.
+- The full suite passes with blocking on and off.
+
 ## CI
 
-- `quality` (lint and typecheck) blocks. `tests` has `continue-on-error: true`,
-  because the site may block GitHub runner IPs. That would be a red build that
-  has nothing to do with the code. To make it block, remove that line.
+- `quality` (lint, typecheck, format) always blocks.
+- The test step is non-blocking unless the repo variable `TESTS_BLOCKING` is
+  `true`, because the site may block GitHub runner IPs. That would be a red
+  build that has nothing to do with the code.
+- Push and PR run smoke. The nightly schedule runs regression. Run workflow
+  lets you pick a suite.
 - `BASE_URL` comes from the dispatch input, then the repo variable, then prod.
+
+## Tooling versions
+
+- All dependencies are pinned to exact versions. lint-staged is on 15.x,
+  because 16+ needs Node 20.17 or 22, and `engines` says 20.12.
+- `engine-strict` is off. A transitive `typescript-eslint` dependency declares
+  Node 20.19+, but it runs fine on 20.18, and it's only used for linting.
