@@ -3,6 +3,9 @@ import type { Page } from '@playwright/test';
 export interface NextData<T = unknown> {
   props: { pageProps: T };
   buildId: string;
+  locale?: string;
+  defaultLocale?: string;
+  page: string;
   query: Record<string, unknown>;
 }
 
@@ -14,7 +17,8 @@ export async function readNextData<T = unknown>(page: Page): Promise<NextData<T>
   return JSON.parse(raw) as NextData<T>;
 }
 
-export async function readPageProps<T = unknown>(page: Page): Promise<T> {
-  const data = await readNextData<T>(page);
-  return data.props.pageProps;
+// /lp/[slug] only returns JSON when the locale is in the path, so always include it
+export function nextDataPath(buildId: string, locale: string, route: string): string {
+  const normalized = route.replace(/^\/+|\/+$/g, '');
+  return `/_next/data/${buildId}/${locale}/${normalized}.json`;
 }

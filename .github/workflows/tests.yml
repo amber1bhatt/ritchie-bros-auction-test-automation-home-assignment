@@ -1,33 +1,48 @@
 name: Tests
 
+# push / PR: smoke. nightly: regression. manual: pick a suite
 on:
   push:
   pull_request:
+  schedule:
+    # only runs on the default branch
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
+      suite:
+        description: 'Suite to run'
+        type: choice
+        options: [smoke, regression, negative, all]
+        default: smoke
       base_url:
         description: 'Target base URL (overrides the BASE_URL variable)'
         required: false
         type: string
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 env:
   # dispatch input > repo variable > prod
   BASE_URL: ${{ inputs.base_url || vars.BASE_URL || 'https://www.rbauction.com' }}
+  # skip git hooks in CI
+  HUSKY: 0
 
 jobs:
   quality:
-    name: Lint and typecheck
+    name: Lint, typecheck, format
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
@@ -36,40 +51,72 @@ jobs:
 
       - run: npm run typecheck
 
+      - run: npm run format:check
+
   tests:
-    name: Playwright tests
+    name: Playwright (${{ inputs.suite || (github.event_name == 'schedule' && 'regression') || 'smoke' }})
     runs-on: ubuntu-latest
     needs: quality
+    timeout-minutes: 20
+    env:
+      SUITE: ${{ inputs.suite || (github.event_name == 'schedule' && 'regression') || 'smoke' }}
+      # otel export is off unless the variable is set
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}
+      OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+      OTEL_SERVICE_NAME: rb-auction-tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
 
+      - name: Get Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      # headed needs a display (xvfb). non-blocking because the WAF may block CI IPs
-      - name: Run tests
-        continue-on-error: true
-        run: xvfb-run -a npx playwright test
+      - name: Install Chromium system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # headed needs a display (xvfb). non-blocking unless TESTS_BLOCKING is 'true',
+      # because the WAF may block CI IPs
+      - name: Run ${{ env.SUITE }} suite
+        continue-on-error: ${{ vars.TESTS_BLOCKING != 'true' }}
+        run: |
+          case "$SUITE" in
+            all) script=test ;;
+            *)   script="test:$SUITE" ;;
+          esac
+          xvfb-run -a npm run "$script"
 
       - name: Upload HTML report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ env.SUITE }}
           path: playwright-report/
           retention-days: 14
 
       - name: Upload traces and results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: test-results
+          name: test-results-${{ env.SUITE }}
           path: test-results/
           retention-days: 14
+          if-no-files-found: ignore

@@ -7,7 +7,7 @@ export class CountryGroup {
   readonly heading: Locator;
 
   constructor(
-    private readonly page: Page,
+    page: Page,
     readonly country: string,
   ) {
     this.heading = page.getByRole('heading', { level: 4, name: country, exact: true });
@@ -21,22 +21,25 @@ export class CountryGroup {
     return this.heading.locator('xpath=following-sibling::ul[1]').getByRole('link');
   }
 
+  // match with or without the trailing *
   siteLink(name: string): Locator {
-    return this.siteLinks().filter({ hasText: name });
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return this.siteLinks().filter({ hasText: new RegExp(`^\\s*${escaped}\\s*\\*?\\s*$`) });
   }
 
   async sites(): Promise<DirectorySite[]> {
-    const links = await this.siteLinks().all();
-    const sites: DirectorySite[] = [];
-    for (const link of links) {
-      const label = (await link.textContent())?.trim() ?? '';
-      const href = (await link.getAttribute('href')) ?? '';
-      sites.push({
-        name: cleanSiteName(label),
-        slug: slugFromHref(href),
-        isSatellite: isSatellite(label),
-      });
-    }
-    return sites;
+    // evaluateAll doesn't auto-wait
+    await this.heading.waitFor();
+    const raw = await this.siteLinks().evaluateAll((links) =>
+      links.map((link) => ({
+        label: link.textContent ?? '',
+        href: link.getAttribute('href') ?? '',
+      })),
+    );
+    return raw.map(({ label, href }) => ({
+      name: cleanSiteName(label),
+      slug: slugFromHref(href),
+      isSatellite: isSatellite(label),
+    }));
   }
 }

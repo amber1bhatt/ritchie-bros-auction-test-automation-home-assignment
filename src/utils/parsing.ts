@@ -18,6 +18,12 @@ export function flattenCategories(groups: ItemsInYardGroup[]): ItemCategory[] {
   return groups.flatMap((group) => group.categories ?? []);
 }
 
+// "78 items" -> 78
+export function parseItemQuantity(text: string): number {
+  const match = text.match(/(\d[\d,]*)\s+items?\b/i);
+  return match ? Number(match[1]!.replace(/,/g, '')) : Number.NaN;
+}
+
 // handles both "2.2k results" and "1-60 of 2290"
 export function parseDisplayedTotal(text: string): number {
   const suffixed = text.match(/([\d.,]+)\s*([km])\b/i);
@@ -30,4 +36,12 @@ export function parseDisplayedTotal(text: string): number {
     candidates.push(base * factor);
   }
   return candidates.length ? Math.max(...candidates) : 0;
+}
+
+export function isIsoDate(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T/.test(value) &&
+    !Number.isNaN(Date.parse(value))
+  );
 }

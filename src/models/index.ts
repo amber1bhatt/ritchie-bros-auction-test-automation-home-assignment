@@ -34,20 +34,8 @@ export interface ItemCategory {
 }
 
 export interface ItemsInYardGroup {
+  sale_event_id?: string;
   categories: ItemCategory[];
-}
-
-export interface SearchRecord {
-  assetDescription: string;
-  itemSiteName?: string;
-  locationName?: string;
-  dateOfEvent?: string;
-}
-
-export interface SearchResults {
-  totalAmount: number;
-  returnedAmount: number;
-  records: SearchRecord[];
 }
 
 export interface RepresentativeContacts {
@@ -64,8 +52,49 @@ export interface Representative {
   contacts: RepresentativeContacts;
 }
 
+export interface LocationsPageProps {
+  yards: Yard[];
+}
+
+export interface YardPageProps {
+  yardDetails?: Yard;
+  upcomingEvents: UpcomingEvent[];
+  itemsInYard: ItemsInYardGroup[];
+  localRepresentative: Representative[];
+}
+
+export interface RedirectPageProps {
+  __N_REDIRECT?: string;
+  __N_REDIRECT_STATUS?: number;
+}
+
+export interface SearchRecord {
+  assetDescription: string;
+  itemSiteName?: string;
+  locationName?: string;
+  dateOfEvent?: string;
+}
+
+export interface SearchResults {
+  totalAmount: number;
+  returnedAmount: number;
+  // missing (not []) when there are no hits
+  records?: SearchRecord[];
+  fallbackApplied?: boolean;
+}
+
+export interface SearchResponse {
+  results: SearchResults;
+}
+
 export interface DirectorySite {
   name: string;
   slug: string;
   isSatellite: boolean;
+}
+
+export interface CarouselCategory {
+  name: string;
+  quantityText: string;
+  quantity: number;
 }
