@@ -49,8 +49,14 @@ Things I found while building this, and the decisions that came out of them.
 
 ## Search
 
-- `POST /api/search` with `{ searchParams: { freeText } }` returns 200 JSON.
-  Totals are in `results.totalAmount`, and lots are in `results.records[]`,
+- `POST /api/search`. `freeText` goes at the top level of the body, next to
+  `filters`. I found that in the search page's own JSON
+  (`pageProps.data.requests`).
+- My first try nested it under `searchParams`. That gets ignored silently and
+  returns the whole catalog (~93k), which is why the API total didn't match the
+  page before. `{ freeText: 'Edmonton', size: 60 }` returns the filtered total
+  (1906 today), same as the page.
+- Totals are in `results.totalAmount`, and lots are in `results.records[]`,
   using `assetDescription` for the name (there's no `title`).
 - On the page, lot cards are `[data-testid^="searchResultItemCard-"]` and
   titles are `item-card-title-link`. The total shows as "1-60 of N" at the
@@ -65,11 +71,17 @@ Things I found while building this, and the decisions that came out of them.
   `fallbackApplied` stays `false`. So the test checks that the page still shows
   results instead of erroring.
 
-## Open questions
+## Negative cases (API)
 
-- The `/search` page shows the Edmonton total (1906 today), but a raw
-  `POST /api/search` with only `{ searchParams: { freeText } }` returns the
-  full catalog (~93k). The page must be adding a filter. Need to sort this out
-  for API 3. Scenario 4 reads the total off the page, so it isn't affected.
+- Malformed JSON to `/api/search` returns 400. It has to be sent as a `Buffer`,
+  because a string gets re-encoded by Playwright and comes back 200.
+- An empty `freeText` returns 200 with the full catalog. No query is needed, and
+  there's no error.
+- The `/not-found` page for a bad yard slug has no `yardDetails` in its page
+  JSON.
+
+## Resolved
+
 - Toggle role: it's `role="tab"`, not a button, and `SiteToggle` uses
-  `getByRole('tab')` now.
+  `getByRole('tab')`.
+- The Edmonton total mismatch: see "Search" above.
