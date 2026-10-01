@@ -4,7 +4,7 @@ import type { DirectorySite } from '../models';
 import { cleanSiteName, isSatellite, slugFromHref } from '../utils/parsing';
 
 export class CountryGroup {
-  private readonly heading: Locator;
+  readonly heading: Locator;
 
   constructor(
     private readonly page: Page,
@@ -13,8 +13,16 @@ export class CountryGroup {
     this.heading = page.getByRole('heading', { level: 4, name: country, exact: true });
   }
 
+  async exists(): Promise<boolean> {
+    return (await this.heading.count()) > 0;
+  }
+
   private siteLinks(): Locator {
     return this.heading.locator('xpath=following-sibling::ul[1]').getByRole('link');
+  }
+
+  siteLink(name: string): Locator {
+    return this.siteLinks().filter({ hasText: name });
   }
 
   async sites(): Promise<DirectorySite[]> {

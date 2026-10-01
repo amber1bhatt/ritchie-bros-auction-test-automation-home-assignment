@@ -28,10 +28,19 @@ Things I found while building this, and the decisions that came out of them.
 - `h1` is "Locations". There are 16 `h4` country headings, and each one is
   followed by a `<ul>` of `<a href="/lp/{slug}">City</a>`. Satellites have a
   trailing `*`.
+- The "Auction sites" / "Local representatives" toggles are `role="tab"`,
+  not buttons.
 - Page JSON: `pageProps.yards` (74 today). Each yard has `name`, `type`
   (`Satellite` or `Permanent`), `address` (`addressLine1`, `city`,
   `provinceStateCode`, `country`, `countryCode`, `zipPostalCode`),
   `contactPhone` and `pickupHoursFrom/To`.
+
+## Yard page (/lp/edmonton-ab)
+
+- There's no `h1`. The name is an `h3`, and section titles are `h4`.
+- Representatives is a tab and sets `?tab=local_representative`. Rep data is in
+  the page JSON as `localRepresentative[]` (name, role, region[], contacts). 23
+  today.
 - Page JSON for `/lp/edmonton-ab` has `yardDetails` (same shape as above),
   `upcomingEvents[]` (`event_advertised_name`, `event_start_date_time`,
   `event_end_date_time`) and `itemsInYard[]`. Each `itemsInYard` group has its
@@ -43,12 +52,24 @@ Things I found while building this, and the decisions that came out of them.
 - `POST /api/search` with `{ searchParams: { freeText } }` returns 200 JSON.
   Totals are in `results.totalAmount`, and lots are in `results.records[]`,
   using `assetDescription` for the name (there's no `title`).
+- On the page, lot cards are `[data-testid^="searchResultItemCard-"]` and
+  titles are `item-card-title-link`. The total shows as "1-60 of N" at the
+  bottom and "N results for" at the top. The tests read the bottom one.
+
+## Negative cases (e2e)
+
+- An unknown yard slug (e.g. `/lp/not-a-real-yard-xyz`) redirects to
+  `/not-found`, with the title "404 page not found".
+- An unmatched search term doesn't show an empty or error state. The API
+  returns 200 with the full catalog (~93k total, 60 returned), and
+  `fallbackApplied` stays `false`. So the test checks that the page still shows
+  results instead of erroring.
 
 ## Open questions
 
-- `freeText: "Edmonton"` returns the full catalog total (~93k), not an Edmonton
-  total (~2290), and the first lots have nothing to do with Edmonton. The page
-  probably sends another param or a different body. Need to sort this out
-  before API 3 checks the total.
-- Not sure yet if the site toggle is a `button` or a `tab`. `SiteToggle`
-  assumes `button` for now. Check when doing 1.9.
+- The `/search` page shows the Edmonton total (1906 today), but a raw
+  `POST /api/search` with only `{ searchParams: { freeText } }` returns the
+  full catalog (~93k). The page must be adding a filter. Need to sort this out
+  for API 3. Scenario 4 reads the total off the page, so it isn't affected.
+- Toggle role: it's `role="tab"`, not a button, and `SiteToggle` uses
+  `getByRole('tab')` now.
