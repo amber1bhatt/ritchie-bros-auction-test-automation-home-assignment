@@ -1,20 +1,31 @@
-import { test as base } from '@playwright/test';
+import { test as base, type BrowserContext } from '@playwright/test';
 
 import { ApiClient } from '../api/api-client';
-import { bootstrapSession } from '../api/session';
+import { bootstrapSession, type SiteSession } from '../api/session';
+import { env } from '../config/env';
 import { LocationsDirectoryPage } from '../pages/locations-directory.page';
 import { SearchResultsPage } from '../pages/search-results.page';
 import { YardPage } from '../pages/yard.page';
+import { blockThirdPartyTracking } from '../utils/third-party';
 import { EDMONTON_YARD, SEARCH } from '../../test-data/constants';
 
-interface Fixtures {
+interface TestFixtures {
   locationsPage: LocationsDirectoryPage;
   edmontonYard: YardPage;
   edmontonSearch: SearchResultsPage;
   api: ApiClient;
 }
 
-export const test = base.extend<Fixtures>({
+interface WorkerFixtures {
+  apiSession: { context: BrowserContext; session: SiteSession };
+}
+
+// specs import test from here, not from @playwright/test
+export const test = base.extend<TestFixtures, WorkerFixtures>({
+  context: async ({ context }, use) => {
+    if (env.blockThirdParty) await blockThirdPartyTracking(context);
+    await use(context);
+  },
   locationsPage: async ({ page }, use) => {
     await use(new LocationsDirectoryPage(page));
   },
@@ -24,10 +35,27 @@ export const test = base.extend<Fixtures>({
   edmontonSearch: async ({ page }, use) => {
     await use(new SearchResultsPage(page, SEARCH.edmonton));
   },
-  api: async ({ page }, use) => {
-    const session = await bootstrapSession(page);
-    await use(new ApiClient(page.request, session));
+
+  // one session per worker instead of loading /lp before every api test.
+  // the api tests only read, so sharing cookies between them is fine
+  apiSession: [
+    async ({ browser }, use, workerInfo) => {
+      // worker fixtures don't get the project's context options
+      const { baseURL, userAgent, viewport, deviceScaleFactor } = workerInfo.project.use;
+      const context = await browser.newContext({ baseURL, userAgent, viewport, deviceScaleFactor });
+      if (env.blockThirdParty) await blockThirdPartyTracking(context);
+      const page = await context.newPage();
+      const session = await bootstrapSession(page);
+      await page.close();
+      await use({ context, session });
+      await context.close();
+    },
+    { scope: 'worker' },
+  ],
+  api: async ({ apiSession }, use) => {
+    await use(new ApiClient(apiSession.context.request, apiSession.session));
   },
 });
 
 export { expect } from '@playwright/test';
+export { TAG } from './tags';

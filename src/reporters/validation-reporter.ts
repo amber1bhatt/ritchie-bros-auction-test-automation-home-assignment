@@ -133,7 +133,7 @@ export default class ValidationReporter implements Reporter {
   private ordered(): TestCase[] {
     const tests = this.root?.allTests() ?? [];
     const projects = this.root?.suites.map((s) => s.title) ?? [];
-    const isNegative = (t: TestCase) => t.location.file.endsWith('negative.spec.ts');
+    const isNegative = (t: TestCase) => t.tags.includes('@negative');
     return [...tests].sort(
       (a, b) =>
         projects.indexOf(a.parent.project()?.name ?? '') -

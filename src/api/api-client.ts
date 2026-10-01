@@ -1,6 +1,7 @@
 import type { APIRequestContext, APIResponse } from '@playwright/test';
 
 import type { SearchResponse, SearchResults } from '../models';
+import { isRetryableStatus, withRetry } from '../utils/retry';
 
 import { nextDataPath } from './next-data';
 import type { SiteSession } from './session';
@@ -12,7 +13,9 @@ export interface SearchParams {
 
 const JSON_HEADERS = { 'content-type': 'application/json', accept: 'application/json' };
 
-// uses page.request so calls share the browser's cookies (plain requests get a 403)
+// uses the browser context's request so calls share its cookies (plain requests get a 403).
+// *Raw methods return the response as is, for negative tests. every call is
+// read-only, so retrying 5xx is safe
 export class ApiClient {
   constructor(
     private readonly request: APIRequestContext,
@@ -21,10 +24,12 @@ export class ApiClient {
 
   async searchRaw(params: SearchParams): Promise<APIResponse> {
     // freeText must be top level, nesting it under searchParams is silently ignored
-    return this.request.post('/api/search', {
-      headers: JSON_HEADERS,
-      data: { size: 60, ...params },
-    });
+    return this.send('POST /api/search', () =>
+      this.request.post('/api/search', {
+        headers: JSON_HEADERS,
+        data: { size: 60, ...params },
+      }),
+    );
   }
 
   async search(params: SearchParams): Promise<SearchResults> {
@@ -37,9 +42,10 @@ export class ApiClient {
   }
 
   async pageDataRaw(route: string): Promise<APIResponse> {
-    return this.request.get(this.pageDataUrl(route), {
-      headers: { accept: 'application/json', 'x-nextjs-data': '1' },
-    });
+    const url = this.pageDataUrl(route);
+    return this.send(`GET ${url}`, () =>
+      this.request.get(url, { headers: { accept: 'application/json', 'x-nextjs-data': '1' } }),
+    );
   }
 
   async pageProps<T>(route: string): Promise<T> {
@@ -48,11 +54,21 @@ export class ApiClient {
   }
 
   async get(path: string): Promise<APIResponse> {
-    return this.request.get(path);
+    return this.send(`GET ${path}`, () => this.request.get(path));
   }
 
   async postRaw(path: string, body: Buffer | Record<string, unknown>): Promise<APIResponse> {
-    return this.request.post(path, { headers: JSON_HEADERS, data: body });
+    return this.send(`POST ${path}`, () =>
+      this.request.post(path, { headers: JSON_HEADERS, data: body }),
+    );
+  }
+
+  private send(label: string, call: () => Promise<APIResponse>): Promise<APIResponse> {
+    return withRetry(call, {
+      label,
+      retryOnResult: (response) =>
+        isRetryableStatus(response.status()) ? `HTTP ${response.status()}` : false,
+    });
   }
 
   private async parseJson<T>(response: APIResponse, label: string): Promise<T> {
@@ -63,6 +79,10 @@ export class ApiClient {
     if (!contentType.includes('application/json')) {
       throw new Error(`${label} returned '${contentType}', expected application/json`);
     }
-    return (await response.json()) as T;
+    try {
+      return (await response.json()) as T;
+    } catch (error) {
+      throw new Error(`${label} returned invalid JSON: ${(error as Error).message}`);
+    }
   }
 }

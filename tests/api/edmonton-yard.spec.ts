@@ -1,10 +1,10 @@
-import { test, expect } from '../../src/fixtures/test';
+import { test, expect, TAG } from '../../src/fixtures/test';
 import type { YardPageProps } from '../../src/models';
 import { logger } from '../../src/utils/logger';
 import { flattenCategories, isIsoDate } from '../../src/utils/parsing';
 import { EDMONTON_YARD, ITEMS_IN_YARD, THRESHOLDS, URLS } from '../../test-data/constants';
 
-test('API 2 - Edmonton yard page JSON', async ({ api }) => {
+test('API 2 - Edmonton yard page JSON', { tag: [TAG.regression, TAG.yard] }, async ({ api }) => {
   let props: YardPageProps | undefined;
 
   await test.step('A2.1 payload is JSON', async () => {
