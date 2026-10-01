@@ -80,6 +80,17 @@ Things I found while building this, and the decisions that came out of them.
 - The `/not-found` page for a bad yard slug has no `yardDetails` in its page
   JSON.
 
+## CI
+
+- `.github/workflows/tests.yml` runs on every push, PR and manual dispatch.
+  `quality` (lint and typecheck) blocks. `tests` runs Playwright under
+  `xvfb-run`, since headed needs a display.
+- `tests` has `continue-on-error: true`, because the site may block GitHub
+  runner IPs. That would be a red build that has nothing to do with the code. To
+  make it block, remove that line.
+- `BASE_URL` comes from the dispatch input, then the repo variable, then prod.
+  That's where a staging URL would go.
+
 ## Resolved
 
 - Toggle role: it's `role="tab"`, not a button, and `SiteToggle` uses

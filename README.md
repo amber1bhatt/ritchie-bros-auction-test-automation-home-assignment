@@ -41,8 +41,8 @@ npm run format
 ## Structure
 
 ```
-tests/e2e/          e2e specs (part 3)
-tests/api/          api specs (part 4)
+tests/e2e/          e2e specs
+tests/api/          api specs
 src/pages/          page objects
 src/components/     shared UI pieces
 src/api/            api client and payload helpers
@@ -51,6 +51,18 @@ src/fixtures/       playwright fixtures
 src/utils/          logger and helpers
 test-data/          expected values and thresholds
 ```
+
+## CI
+
+`.github/workflows/tests.yml` runs on every push and PR:
+
+- `quality`: lint and typecheck. Failures block.
+- `tests`: Playwright under `xvfb-run` (headed needs a display on Linux), with
+  the report and traces uploaded as artifacts.
+
+The `tests` job doesn't block for now, since the site may block GitHub's IP
+ranges. Set a `BASE_URL` repo variable, or use **Run workflow**, to point it at
+another environment.
 
 ## Notes
 
