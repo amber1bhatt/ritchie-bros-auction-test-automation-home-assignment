@@ -5,8 +5,7 @@ import { NEGATIVE, SEARCH } from '../../test-data/constants';
 // size: -1 returns a 503, left out (see ASSUMPTIONS.md)
 test.describe('Negative API', { tag: [TAG.negative, TAG.regression] }, () => {
   test('search: malformed JSON body returns 400', { tag: TAG.search }, async ({ api }) => {
-    // has to be a Buffer, a plain string gets re-encoded and returns 200
-    const response = await api.postRaw('/api/search', Buffer.from('{ not valid json', 'utf8'));
+    const response = await api.postRaw('/api/search', '{ not valid json');
     expect(response.status(), `malformed body returns ${response.status()}`).toBe(400);
   });
 

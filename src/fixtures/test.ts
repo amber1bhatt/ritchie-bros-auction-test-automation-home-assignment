@@ -1,4 +1,4 @@
-import { test as base, type BrowserContext } from '@playwright/test';
+import { test as base, type Page } from '@playwright/test';
 
 import { ApiClient } from '../api/api-client';
 import { bootstrapSession, type SiteSession } from '../api/session';
@@ -17,7 +17,7 @@ interface TestFixtures {
 }
 
 interface WorkerFixtures {
-  apiSession: { context: BrowserContext; session: SiteSession };
+  apiSession: { page: Page; session: SiteSession };
 }
 
 // specs import test from here, not from @playwright/test
@@ -46,14 +46,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       if (env.blockThirdParty) await blockThirdPartyTracking(context);
       const page = await context.newPage();
       const session = await bootstrapSession(page);
-      await page.close();
-      await use({ context, session });
+      // stays open, api calls are sent from this page
+      await use({ page, session });
       await context.close();
     },
     { scope: 'worker' },
   ],
   api: async ({ apiSession }, use) => {
-    await use(new ApiClient(apiSession.context.request, apiSession.session));
+    await use(new ApiClient(apiSession.page, apiSession.session));
   },
 });
 

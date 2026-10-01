@@ -1,8 +1,9 @@
-import type { APIRequestContext, APIResponse } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import type { SearchResponse, SearchResults } from '../models';
 import { isRetryableStatus, withRetry } from '../utils/retry';
 
+import { browserFetch, type FetchInit, type HttpResponse } from './browser-fetch';
 import { nextDataPath } from './next-data';
 import type { SiteSession } from './session';
 
@@ -13,23 +14,22 @@ export interface SearchParams {
 
 const JSON_HEADERS = { 'content-type': 'application/json', accept: 'application/json' };
 
-// uses the browser context's request so calls share its cookies (plain requests get a 403).
+// calls are made with fetch from a page that's already past the WAF (see browser-fetch.ts).
 // *Raw methods return the response as is, for negative tests. every call is
 // read-only, so retrying 5xx is safe
 export class ApiClient {
   constructor(
-    private readonly request: APIRequestContext,
+    private readonly page: Page,
     readonly session: SiteSession,
   ) {}
 
-  async searchRaw(params: SearchParams): Promise<APIResponse> {
+  async searchRaw(params: SearchParams): Promise<HttpResponse> {
     // freeText must be top level, nesting it under searchParams is silently ignored
-    return this.send('POST /api/search', () =>
-      this.request.post('/api/search', {
-        headers: JSON_HEADERS,
-        data: { size: 60, ...params },
-      }),
-    );
+    return this.send('/api/search', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ size: 60, ...params }),
+    });
   }
 
   async search(params: SearchParams): Promise<SearchResults> {
@@ -41,11 +41,11 @@ export class ApiClient {
     return nextDataPath(this.session.buildId, this.session.locale, route);
   }
 
-  async pageDataRaw(route: string): Promise<APIResponse> {
-    const url = this.pageDataUrl(route);
-    return this.send(`GET ${url}`, () =>
-      this.request.get(url, { headers: { accept: 'application/json', 'x-nextjs-data': '1' } }),
-    );
+  async pageDataRaw(route: string): Promise<HttpResponse> {
+    return this.send(this.pageDataUrl(route), {
+      method: 'GET',
+      headers: { accept: 'application/json', 'x-nextjs-data': '1' },
+    });
   }
 
   async pageProps<T>(route: string): Promise<T> {
@@ -53,25 +53,28 @@ export class ApiClient {
     return (await this.parseJson<{ pageProps: T }>(response, route)).pageProps;
   }
 
-  async get(path: string): Promise<APIResponse> {
-    return this.send(`GET ${path}`, () => this.request.get(path));
+  async get(path: string): Promise<HttpResponse> {
+    return this.send(path, { method: 'GET' });
   }
 
-  async postRaw(path: string, body: Buffer | Record<string, unknown>): Promise<APIResponse> {
-    return this.send(`POST ${path}`, () =>
-      this.request.post(path, { headers: JSON_HEADERS, data: body }),
-    );
+  // a string body is sent as is, for the malformed JSON test
+  async postRaw(path: string, body: string | Record<string, unknown>): Promise<HttpResponse> {
+    return this.send(path, {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+    });
   }
 
-  private send(label: string, call: () => Promise<APIResponse>): Promise<APIResponse> {
-    return withRetry(call, {
-      label,
+  private send(url: string, init: FetchInit): Promise<HttpResponse> {
+    return withRetry(() => browserFetch(this.page, url, init), {
+      label: `${init.method} ${url}`,
       retryOnResult: (response) =>
         isRetryableStatus(response.status()) ? `HTTP ${response.status()}` : false,
     });
   }
 
-  private async parseJson<T>(response: APIResponse, label: string): Promise<T> {
+  private async parseJson<T>(response: HttpResponse, label: string): Promise<T> {
     if (!response.ok()) {
       throw new Error(`${label} returned HTTP ${response.status()}`);
     }

@@ -8,10 +8,12 @@ export const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([408, 429, 500, 5
 
 export const isRetryableStatus = (status: number): boolean => RETRYABLE_STATUSES.has(status);
 
-// chromium net::ERR_* and node socket errors
+// chromium net::ERR_*, fetch failures in the page, and node socket errors
 export const isTransientNetworkError = (error: unknown): boolean =>
   error instanceof Error &&
-  /net::ERR_|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(error.message);
+  /net::ERR_|Failed to fetch|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(
+    error.message,
+  );
 
 export interface RetryOptions<T> {
   label: string;
