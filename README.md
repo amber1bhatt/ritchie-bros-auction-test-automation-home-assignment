@@ -191,6 +191,44 @@ On CI, set the `OTEL_EXPORTER_OTLP_ENDPOINT` repo variable and the
 `OTEL_EXPORTER_OTLP_HEADERS` secret. If the export fails, a warning is printed
 and the run isn't affected.
 
+### Viewing the traces
+
+CI runs are sent to a Honeycomb team. [Join it here][hc-join] (free, read-only
+by default) to open the links below. Each one runs its query over the last 7
+days. The screenshots are from the first day of runs.
+
+One run as a trace: the run, then each test, its steps, and every check and
+Playwright call inside them. The panel on the right shows the attributes,
+including the CI event and run ID.
+
+![Trace of one CI run](docs/images/trace.png)
+
+[Runs over time][q-runs]: run duration and failed and flaky counts, by suite.
+
+![Runs over time](docs/images/runs-over-time.png)
+
+[Test results by status][q-status]: test count per project and status.
+
+![Test results by status](docs/images/test-results-by-status.png)
+
+[Slowest tests][q-tests]: duration heatmap and P95 per test.
+
+![Slowest tests](docs/images/slowest-tests.png)
+
+[Slowest steps][q-steps]: P95 per `test.step`.
+
+![Slowest steps](docs/images/slowest-steps.png)
+
+[Failed or retried tests][q-failures]: every test attempt that didn't pass,
+with its retry number. Empty so far, since nothing has failed.
+
+[hc-join]: https://ui.honeycomb.io/join_team/rb-auction-test-automation-home-assignment
+[q-runs]: https://ui.honeycomb.io/rb-auction-test-automation-home-assignment/environments/test/datasets/rb-auction-tests?query=%7B%22time_range%22%3A604800%2C%22granularity%22%3A3600%2C%22calculations%22%3A%5B%7B%22op%22%3A%22MAX%22%2C%22column%22%3A%22duration_ms%22%7D%2C%7B%22op%22%3A%22SUM%22%2C%22column%22%3A%22test.failed%22%7D%2C%7B%22op%22%3A%22SUM%22%2C%22column%22%3A%22test.flaky%22%7D%5D%2C%22filters%22%3A%5B%7B%22column%22%3A%22name%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%22playwright%20run%22%7D%5D%2C%22breakdowns%22%3A%5B%22test.suite%22%5D%7D
+[q-status]: https://ui.honeycomb.io/rb-auction-test-automation-home-assignment/environments/test/datasets/rb-auction-tests?query=%7B%22time_range%22%3A604800%2C%22calculations%22%3A%5B%7B%22op%22%3A%22COUNT%22%7D%5D%2C%22filters%22%3A%5B%7B%22column%22%3A%22name%22%2C%22op%22%3A%22starts-with%22%2C%22value%22%3A%22test%3A%20%22%7D%5D%2C%22breakdowns%22%3A%5B%22test.project%22%2C%22test.status%22%5D%2C%22orders%22%3A%5B%7B%22op%22%3A%22COUNT%22%2C%22order%22%3A%22descending%22%7D%5D%7D
+[q-tests]: https://ui.honeycomb.io/rb-auction-test-automation-home-assignment/environments/test/datasets/rb-auction-tests?query=%7B%22time_range%22%3A604800%2C%22calculations%22%3A%5B%7B%22op%22%3A%22HEATMAP%22%2C%22column%22%3A%22duration_ms%22%7D%2C%7B%22op%22%3A%22P95%22%2C%22column%22%3A%22duration_ms%22%7D%5D%2C%22filters%22%3A%5B%7B%22column%22%3A%22name%22%2C%22op%22%3A%22starts-with%22%2C%22value%22%3A%22test%3A%20%22%7D%5D%2C%22breakdowns%22%3A%5B%22test.title%22%5D%2C%22orders%22%3A%5B%7B%22op%22%3A%22P95%22%2C%22column%22%3A%22duration_ms%22%2C%22order%22%3A%22descending%22%7D%5D%2C%22limit%22%3A20%7D
+[q-steps]: https://ui.honeycomb.io/rb-auction-test-automation-home-assignment/environments/test/datasets/rb-auction-tests?query=%7B%22time_range%22%3A604800%2C%22calculations%22%3A%5B%7B%22op%22%3A%22P95%22%2C%22column%22%3A%22duration_ms%22%7D%5D%2C%22filters%22%3A%5B%7B%22column%22%3A%22step.category%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%22test.step%22%7D%5D%2C%22breakdowns%22%3A%5B%22name%22%5D%2C%22orders%22%3A%5B%7B%22op%22%3A%22P95%22%2C%22column%22%3A%22duration_ms%22%2C%22order%22%3A%22descending%22%7D%5D%2C%22limit%22%3A10%7D
+[q-failures]: https://ui.honeycomb.io/rb-auction-test-automation-home-assignment/environments/test/datasets/rb-auction-tests?query=%7B%22time_range%22%3A604800%2C%22calculations%22%3A%5B%7B%22op%22%3A%22COUNT%22%7D%5D%2C%22filters%22%3A%5B%7B%22column%22%3A%22name%22%2C%22op%22%3A%22starts-with%22%2C%22value%22%3A%22test%3A%20%22%7D%2C%7B%22column%22%3A%22test.status%22%2C%22op%22%3A%22%21%3D%22%2C%22value%22%3A%22passed%22%7D%5D%2C%22breakdowns%22%3A%5B%22test.title%22%2C%22test.status%22%2C%22test.retry%22%5D%2C%22orders%22%3A%5B%7B%22op%22%3A%22COUNT%22%2C%22order%22%3A%22descending%22%7D%5D%7D
+
 ## Known gaps
 
 - Headed Chromium only, because of the WAF. CI runs may get blocked.
